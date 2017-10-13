@@ -1,16 +1,10 @@
 # helicopter
 MSBD 5013 Project
 
-
-
-
-###About this project
+##About this project
 This is a quantitative trading model based on pairs trading. 
 
-
-
-###How this strategy works
-
+##How this strategy works
 
 Finding similar pair of trading items is the foundation of pair trading. First, we transform history data into price changin rate. By definition, the commodities with similar price changing rate are similar items. Sp, by similarity metrics (cosine/knn/pearson correlation), we pick out the most similar pair of commodities.
 
@@ -25,10 +19,7 @@ The trading steps are:
 
 3. Hold the commodity with lower price changing rate, until the price changing rate chases up.
 
-
-
-
-###How to improve
+##How to improve
 
 1. We can trade on more commodities to hedge the risk.
 
