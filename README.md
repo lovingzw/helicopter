@@ -17,16 +17,9 @@ The trading steps are:
 
 Loop
 
-2. If status = 0, do step 3; Else, do step 8
+2. If status = 0, do step 3; Else, jump to step 8
 
-3. If the difference of price changing rate satisfies with the condition of transaction fee rate, do step 4
-
-
-
-
-
-
-
+3. If the difference of price changing rate satisfies with the condition of transaction fee rate, do step 4; Else, jump to step 7
 
 4. Set status = 1
 
@@ -39,6 +32,8 @@ Loop
 8. If the price changing rate of the item we hold chases up, close out
 
 9. Set status = 0
+
+10. Back to step 2
 
 ## How to improve
 
