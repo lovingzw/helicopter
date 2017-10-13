@@ -6,7 +6,7 @@ This is a quantitative trading model based on pairs trading.
 
 ## How this strategy works
 
-Finding similar pair of trading items is the foundation of pair trading. First, we transform history data into price changin rate. By definition, the commodities with similar price changing rate are similar items. Sp, by similarity metrics (cosine/knn/pearson correlation), we pick out the most similar pair of commodities.
+Finding similar pair of trading items is the foundation of pair trading. First, we transform history data into price changing rate. By definition, the commodities with similar price changing rate are similar items. So, by similarity metrics (cosine/knn/pearson correlation), we pick out the most similar pair of commodities.
 
 
 Say we find out that A and B are the commodities with most similarity. Then we trade on these 2 items.
