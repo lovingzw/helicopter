@@ -13,11 +13,32 @@ Say we find out that A and B are the commodities with most similarity. Then we t
 
 The trading steps are:
 
-1. If the average price changing rate is positive, do step 2
+1. Set status = 0
 
-2. If the difference of pricec changing rate satisfies with the condition of transaction fee rate, do step 3
+Loop
 
-3. Hold the commodity with lower price changing rate, until the price changing rate chases up.
+2. If status = 0, do step 3; Else, do step 8
+
+3. If the difference of price changing rate satisfies with the condition of transaction fee rate, do step 4
+
+
+
+
+
+
+
+
+4. Set status = 1
+
+5. Calculate the average price changing rate to determine their global trend
+
+6. If the global trend goes up, hold the commodity with lower price changing rate. Else, do the opposite
+
+7. Back to step 2
+
+8. If the price changing rate of the item we hold chases up, close out
+
+9. Set status = 0
 
 ## How to improve
 
