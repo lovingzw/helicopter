@@ -1,9 +1,9 @@
 import numpy as np
-from functions import average, gradient
+from functions import trend, gradient, decision, operation, close, adjust
 
 asset_index1 = 7  # define item 1 as coke
 asset_index2 = 8  # define item 2 as coal
-toss = 2000000
+underwear = 9000000  # define balance limit
 
 
 def handle_bar(timer, data, info, init_cash, transaction, detail_last_min, memory):
@@ -11,61 +11,44 @@ def handle_bar(timer, data, info, init_cash, transaction, detail_last_min, memor
     position_new = detail_last_min[0]
 
     if timer == 0:
-        memory.status = 0
+        memory.status = 0  # -1, stop loss; 0, ready; 1, open
+        memory.asset = init_cash
 
-    if memory.status == 0:
+    if  memory.status == -1:
+        if (timer - memory.stop_loss_time) % 120 == 0:
+            memory.status = 0
+
+    if memory.status == 0:  # ready to open
 
         gradient1 = gradient(asset_index1, data)
         gradient2 = gradient(asset_index2, data)
-        diff = gradient1 - gradient2
+        delta = gradient1 - gradient2
 
-        if abs(diff) > 3 * transaction:  # just to ensure interest
+        if abs(delta) > 3 * transaction:  # just to ensure interest
 
-            if average(gradient1, gradient2) >= 0:  # determine the trend
-                trend = 1
-            else:
-                trend = -1
-            if (diff > 0 and trend == 1) or (diff < 0 and trend == -1):  # determine which one to operate
-                operate_index = asset_index2
-                target_index = asset_index1
-            else:
-                operate_index = asset_index1
-                target_index = asset_index2
-
-            avg_price = np.mean(data[operate_index, 0:3])
-            lot_value = avg_price * info.unit_per_lot[operate_index] * info.margin_rate[operate_index]
-            volume = np.round(toss / (lot_value * (1. + transaction)))
-
-            if detail_last_min[1] > 3000000:
-                if trend == 1:
-                    position_new[operate_index] = volume
-                else:
-                    position_new[operate_index] = -volume
-
+            current_trend = trend(asset_index1, asset_index2, data)  # trend detection
+            index = decision(delta, current_trend, asset_index1, asset_index2)  # item decision
+            operate_index = index[0]
+            target_index = index[1]
             memory.operate_price = data[operate_index, 0]
             memory.target_price = data[target_index, 0]
-            memory.volume = volume
             memory.operate_index = operate_index
             memory.target_index = target_index
-            memory.asset_operate = detail_last_min[1]
             memory.operate_time = timer
-            memory.trend = trend
+            memory.trend = current_trend
+
+            position_new = operation(data, detail_last_min, info, operate_index, transaction, current_trend, underwear,)
             memory.position = position_new
+            memory.asset = detail_last_min[2]
             memory.status = 1
 
     else:
-        if detail_last_min[1] / memory.asset_operate < 0.9:  # stop loss
-            memory.status = 0
-            position_new = np.zeros(13, dtype=np.int)
-        else:
-            duration = timer - memory.operate_time
-            operate_slope = (data[memory.operate_index, 3] - memory.operate_price) / (memory.operate_price * duration)
-            target_slope = (data[memory.target_index, 3] - memory.target_price) / (memory.target_price * duration)
-            if (operate_slope >= 2 * target_slope and memory.trend == 1) or (
-                            operate_slope <= 2 * target_slope and memory.trend == -1):
+        if memory.status == 1:  # adjustment (stop loss or close out)
+            position_new = adjust(detail_last_min, memory, timer)
+
+            if close(memory, timer, data):  # close out
                 memory.status = 0
                 position_new = np.zeros(13, dtype=np.int)
-
 
     return position_new, memory
 
