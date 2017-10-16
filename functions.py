@@ -6,10 +6,10 @@ def gradient(x, data):  # input index, output current gradient
     return g
 
 
-def trend(a, b, data):  # trend detection needs improvement
+def trend(a, b, g, data):  # trend detection needs improvement
     w1 = data[a, 4] / (data[a, 4] + data[b, 4])
     w2 = data[b, 4] / (data[a, 4] + data[b, 4])
-    t = (w1 * a + w2 * b) / 2
+    t = (w1 * g[0] + w2 * g[1]) / 2
     if t >= 0:
         tr = 1
     else:
@@ -54,20 +54,45 @@ def adjust(detail_last_min, memory, timer):
 
 
 def peak_update(detail_last_min, memory):
-    peak = memory.top
-    if detail_last_min[4] > memory.top:
-        peak = detail_last_min[4]
-    return peak
+    return np.maximum(detail_last_min[2], memory.top)
 
 
-def close(memory, timer, data):
+def close(detail_last_min, memory, timer, data):
     c = False
     duration = timer - memory.operate_time
     s1 = (data[memory.operate_index, 3] - memory.operate_price) / (memory.operate_price * duration)
     s2 = (data[memory.target_index, 3] - memory.target_price) / (memory.target_price * duration)
-    if (s1 >= 1.5 * s2 and memory.trend == 1) or (s1 <= 1.5 * s2 and memory.trend == -1):
-        c = True
+    flag1 =  (s1 >= 2 * s2 and memory.trend == 1) or (s1 <= 2 * s2 and memory.trend == -1)
+    #flag2 = detail_last_min[4] > memory.total
+    if flag1:
+         c = True
     return c
+
+
+def pair_close(detail_last_min, zscore):
+    p = detail_last_min[0]
+    if abs(zscore < 0.1):
+        p = np.zeros(13,dtype=int)
+    return p
+
+
+def pair_open(detail_last_min, data, info, transaction, index1, index2, money_pool, zscore):
+    p = detail_last_min[0]
+    avg_price1 = np.mean(data[index1, 0:3])
+    lot_value1 = avg_price1 * info.unit_per_lot[index1] * info.margin_rate[index1]
+    volume1 = np.round((money_pool / 2) / (lot_value1 * (1. + transaction)))
+    avg_price2 = np.mean(data[index2, 0:3])
+    lot_value2 = avg_price2 * info.unit_per_lot[index2] * info.margin_rate[index2]
+    volume2 = np.round((money_pool / 2) / (lot_value2 * (1. + transaction)))
+    if zscore > 0:
+        p[index1] = -volume1
+        p[index2] = volume2
+    else:
+        p[index1] = volume1
+        p[index2] = -volume2
+    return p
+
+
 
 
 def buy(position, index, amount_cash, data, info, transaction):
