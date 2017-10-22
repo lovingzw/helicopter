@@ -76,20 +76,26 @@ def pair_close(detail_last_min, zscore):
     return p
 
 
-def pair_open(detail_last_min, data, info, transaction, index1, index2, money_pool, zscore):
+def pair_open(detail_last_min, data, info, transaction, index1, index2, money_pool, zscore, vibr):
     p = detail_last_min[0]
     avg_price1 = np.mean(data[index1, 0:3])
     lot_value1 = avg_price1 * info.unit_per_lot[index1] * info.margin_rate[index1]
-    volume1 = np.round((money_pool / 2) / (lot_value1 * (1. + transaction)))
     avg_price2 = np.mean(data[index2, 0:3])
     lot_value2 = avg_price2 * info.unit_per_lot[index2] * info.margin_rate[index2]
-    volume2 = np.round((money_pool / 2) / (lot_value2 * (1. + transaction)))
-    if zscore > 0:
-        p[index1] = -volume1
-        p[index2] = volume2
+    if vibr == 1:
+        if zscore > 0:
+            p[index1] = -np.floor((money_pool * 0.45) / (lot_value1 *(1. + transaction)))
+            p[index2] = np.floor((money_pool * 0.55) / (lot_value2 * (1. + transaction)))
+        else:
+            p[index1] = np.floor((money_pool * 0.55) / (lot_value1 * (1. + transaction)))
+            p[index2] = -np.floor((money_pool * 0.45) / (lot_value2 * (1. + transaction)))
     else:
-        p[index1] = volume1
-        p[index2] = -volume2
+        if zscore > 0:
+            p[index1] = -np.floor((money_pool * 0.55) / (lot_value1 * (1. + transaction)))
+            p[index2] = np.floor((money_pool * 0.45) / (lot_value2 * (1. + transaction)))
+        else:
+            p[index1] = np.floor((money_pool * 0.45) / (lot_value1 * (1. + transaction)))
+            p[index2] = -np.floor((money_pool * 0.55) / (lot_value2 * (1. + transaction)))
     return p
 
 
@@ -112,7 +118,7 @@ def buy(position, index, amount_cash, data, info, transaction):
     # Get the value of one lot so that you can get how many lots you can buy in total
     lot_value = avg_price * info.unit_per_lot[index] * info.margin_rate[index]
 
-    position[index] = np.round(amount_cash / (lot_value * (1. + transaction)))
+    position[index] = np.floor(amount_cash / (lot_value * (1. + transaction)))
 
     return True
 

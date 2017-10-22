@@ -3,6 +3,7 @@ import numpy as np
 index1 = 7  # define item as coke
 underwear = 5000000  # define balance limit
 vol_threshold = 1.8
+zscore_threshold = 0.68
 partition = 0.9
 
 
@@ -26,10 +27,18 @@ def handle_bar(timer, data, info, init_cash, transaction, detail_last_min, memor
         memory.vol = np.append(memory.s1[1:59], current_vol)
 
         avg10_price = np.mean(memory.s1[-10:-1])
-        #avg10_vol = np.mean(memory.vol[-10:-1])
-        #avg60_price = np.mean(memory.s1)
+        avg10_vol = np.mean(memory.vol[-10:-1])
+        avg60_price = np.mean(memory.s1)
         avg60_vol = np.mean(memory.vol)
-        if current_vol > avg60_vol * vol_threshold:
+        std60_price = np.std(memory.s1)
+        std60_vol = np.std(memory.vol)
+        zscore_price = (current_price - avg60_price) / std60_price
+        zscore_vol = (current_vol - avg60_vol) / std60_vol
+        trigger1 = current_vol > avg60_vol * vol_threshold  # volume
+        trigger2 = abs(zscore_vol) > zscore_threshold  # volume
+        trigger3 = abs(zscore_price) > zscore_threshold  # price
+
+        if trigger1 and trigger2 and trigger3:
             if current_price > avg10_price:
                 trend = 1
             else:
