@@ -2,9 +2,14 @@ import numpy as np
 
 index1 = 7  # define item as coke
 underwear = 5000000  # define balance limit
-vol_threshold = 1.8
-zscore_threshold = 0.68
 partition = 0.9
+
+vol_threshold = 1.75
+zscore_threshold = 2.33
+stop_loss_threshold = 0.05
+stop_loss_freeze = 15
+short_period = 15
+long_period = 43
 
 
 def handle_bar(timer, data, info, init_cash, transaction, detail_last_min, memory):
@@ -17,29 +22,29 @@ def handle_bar(timer, data, info, init_cash, transaction, detail_last_min, memor
     elif timer == 1:
         memory.s1 = np.array([memory.s1, np.mean(data[index1, 0:3])])
         memory.vol = np.array([memory.vol, data[index1, 4]])
-    elif 0 < timer < 60:
+    elif 0 < timer < long_period:
         memory.s1 = np.append(memory.s1, np.mean(data[index1, 0:3]))
         memory.vol = np.append(memory.vol, data[index1, 4])
     else:
         current_price = np.mean(data[index1, 0:3])
         current_vol = data[index1, 4]
-        memory.s1 = np.append(memory.s1[1:59], current_price)
-        memory.vol = np.append(memory.s1[1:59], current_vol)
+        memory.s1 = np.append(memory.s1[1:long_period - 1], current_price)
+        memory.vol = np.append(memory.s1[1:long_period - 1], current_vol)
 
-        avg10_price = np.mean(memory.s1[-10:-1])
-        avg10_vol = np.mean(memory.vol[-10:-1])
-        avg60_price = np.mean(memory.s1)
-        avg60_vol = np.mean(memory.vol)
-        std60_price = np.std(memory.s1)
-        std60_vol = np.std(memory.vol)
-        zscore_price = (current_price - avg60_price) / std60_price
-        zscore_vol = (current_vol - avg60_vol) / std60_vol
-        trigger1 = current_vol > avg60_vol * vol_threshold  # volume
-        trigger2 = abs(zscore_vol) > zscore_threshold  # volume
+        avgSP_price = np.mean(memory.s1[-short_period + 1:-1])
+        avgLP_price = np.mean(memory.s1)
+        avgLP_vol = np.mean(memory.vol)
+        stdLP_price = np.std(memory.s1)
+        stdLP_vol = np.std(memory.vol)
+
+        zscore_price = (current_price - avgLP_price) / stdLP_price
+        zscore_vol = (current_vol - avgLP_vol) / stdLP_vol
+        trigger1 = current_vol > avgLP_vol * vol_threshold  # volume
+        trigger2 = zscore_vol > zscore_threshold  # volume
         trigger3 = abs(zscore_price) > zscore_threshold  # price
 
         if trigger1 and trigger2 and trigger3:
-            if current_price > avg10_price:
+            if current_price > avgSP_price:
                 trend = 1
             else:
                 trend = -1
@@ -47,20 +52,21 @@ def handle_bar(timer, data, info, init_cash, transaction, detail_last_min, memor
             trend = 0
 
         if memory.status == -1:  # hold after stop loss
-            if (timer - memory.stop_loss_time) % 120 == 0:
+            if (timer - memory.stop_loss_time) % stop_loss_freeze == 0:
                 memory.status = 0
         elif memory.status == 0:  # ready to open
             if trend != 0 and detail_last_min[4] > underwear:
                 money_pool = (detail_last_min[1] - underwear) * partition
                 lot_value = current_price * info.unit_per_lot[index1] * info.margin_rate[index1]
-                position_new[index1] = trend * np.floor(money_pool / (lot_value * (1. + transaction)))
+                lots = np.floor(money_pool / (lot_value * (1. + transaction)))
+                position_new[index1] = trend * lots
                 memory.top = detail_last_min[4]
-                memory.total = detail_last_min[4]
+                memory.margin = lots * lot_value
                 memory.status = 1
-                memory.trend = trend
+
         else:
             memory.top = np.maximum(detail_last_min[4], memory.top)
-            if (detail_last_min[4] - memory.top) / memory.top < -0.08:  # stop loss
+            if (detail_last_min[4] - memory.top) / memory.top < -stop_loss_threshold:  # stop loss
                 memory.stop_loss_time = timer
                 position_new[index1] = 0
                 memory.status = -1
