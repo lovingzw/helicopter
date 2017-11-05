@@ -8,7 +8,8 @@ Created on Sat Sep 16 16:08:42 2017
 # Change the working directory to your strategy folder. You should change this 
 # directory below on your own computer accordingly
 import os
-working_directory = '/Users/wangguizheng1995/PycharmProjects/helicopter'
+from base_dir import BASR_DIR, dataPath
+working_directory = BASR_DIR
 os.chdir(working_directory)
 from strategy import handle_bar
 
@@ -19,8 +20,8 @@ import h5py
 import pandas as pd
 import numpy as np
 # All data directory
-data_directory = '/Users/wangguizheng1995/PycharmProjects/helicopter/Data/Data/'
-format1_dir = 'data_format1_20170717_20170915.h5'
+data_directory = dataPath
+format1_dir = 'data_format1_20171030_20171103.h5'
 format2_dir = 'latestData.h5'
 
 ''' In Python, list appending should be careful because it is passed by reference.
@@ -136,7 +137,7 @@ class backTest:
             pnl = pnl + revenue_min - commission
             
             # Check if strategy losses too much
-            assert pnl > self.margin_threshold, "Too much loss, strategy failed"
+            assert pnl-marginRequired > self.margin_threshold, "Risk level too high"
             
             # Check if margin requirement is satisfied
             assert marginRequired <= pnl, "You don't have enough margin"
@@ -146,12 +147,12 @@ class backTest:
             details.append(copy.deepcopy(detail))
             
             # Update position and timer
-            lastPosition = curPosition
+            lastPosition = copy.deepcopy(curPosition)
             timer+=1
             if '09:30:00' in keys[i]:
                 print(keys[i][:10])
             
-        detailCol = ["position","cash_balance", "margin_balance", "revenue", "total_balance", "transaction_cost"]
+        detailCol = ["postion","cash_balance", "margin_balance", "revenue", "total_balance", "transaction_cost"]
         detailsDF = pd.DataFrame(details,index=pd.to_datetime(keys[:-1]),columns=detailCol)
         
         btData.close()
